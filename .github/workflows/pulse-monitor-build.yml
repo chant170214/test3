@@ -27,10 +27,18 @@ jobs:
         with:
           gradle-version: "9.6.0"
 
-      - name: Install Android SDK 36
+      - name: Ensure Android SDK 36
+        shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          set -e
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1 || true)"
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses >/dev/null || true
+            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+          else
+            echo "sdkmanager not found; using runner's preinstalled Android SDK"
+          fi
 
       - name: Build debug APK
         working-directory: pulse-monitor-src
