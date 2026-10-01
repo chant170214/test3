@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Bundle;
 
 import java.util.Locale;
 import java.util.concurrent.Executors;
@@ -25,7 +26,7 @@ public final class MonitorService extends Service {
 
     // V2 uses a new channel because Android doesn't let an app raise the
     // importance of an existing channel after it has been created.
-    private static final String CHANNEL_ID = "monitoring_live_v2";
+    private static final String CHANNEL_ID = "monitoring_live_v3";
     private static final int NOTIFICATION_ID = 4107;
     private static final long HISTORY_INTERVAL_MS = 15_000L;
     private static final long PRUNE_INTERVAL_MS = 6L * 60L * 60L * 1000L;
@@ -175,16 +176,31 @@ public final class MonitorService extends Service {
             builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
         }
 
+        if (Build.VERSION.SDK_INT >= 36) {
+            Bundle liveExtras = new Bundle();
+            liveExtras.putBoolean("android.requestPromotedOngoing", true);
+            liveExtras.putString("android.shortCriticalText", buildChipText(s));
+            builder.addExtras(liveExtras);
+        }
+
         return builder.build();
+    }
+
+    private String buildChipText(MetricSnapshot s) {
+        if (s == null) return "LIVE";
+        if (s.hasSystemCpu()) {
+            return "CPU" + Math.round(s.systemCpuPercent) + "%";
+        }
+        return "RAM" + Math.round(s.ramPercent) + "%";
     }
 
     private void createChannel() {
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "常駐モニター",
+                "ライブモニター",
                 NotificationManager.IMPORTANCE_DEFAULT
         );
-        channel.setDescription("CPU・RAM・通信・バッテリーをステータスバーと通知欄に常時表示します");
+        channel.setDescription("Android 16のLive Updateチップと通知欄にCPU・RAMなどを常時表示します");
         channel.setSound(null, null);
         channel.enableVibration(false);
         channel.enableLights(false);
