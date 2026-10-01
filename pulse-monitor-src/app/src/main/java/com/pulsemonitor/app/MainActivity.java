@@ -41,20 +41,41 @@ public final class MainActivity extends Activity {
 
     private TextView statusText;
     private Button monitorButton;
+
     private TextView cpuValue;
     private TextView cpuDetail;
     private TextView ramValue;
     private TextView ramDetail;
     private TextView appRamValue;
+
     private TextView storageValue;
     private TextView storageDetail;
+
     private TextView batteryValue;
     private TextView batteryDetail;
+    private TextView batteryCurrentValue;
+    private TextView batteryCurrentDetail;
+
     private TextView thermalValue;
     private TextView uptimeValue;
+
+    private TextView networkDownValue;
+    private TextView networkDownDetail;
+    private TextView networkUpValue;
+    private TextView networkUpDetail;
+
+    private TextView swapValue;
+    private TextView swapDetail;
+    private TextView cacheValue;
+    private TextView cacheDetail;
+
+    private TextView deviceValue;
+    private TextView deviceDetail;
+
     private HistoryGraphView graphView;
     private Spinner rangeSpinner;
     private TextView cpuLegend;
+
     private boolean pendingStartAfterPermission;
     private long lastGraphRefresh = 0L;
 
@@ -62,7 +83,6 @@ public final class MainActivity extends Activity {
     private int card;
     private int primaryText;
     private int secondaryText;
-    private int accent;
 
     private final Runnable refreshRunnable = new Runnable() {
         @Override
@@ -121,7 +141,12 @@ public final class MainActivity extends Activity {
         TextView title = text("Pulse Monitor", 30, primaryText, Typeface.BOLD);
         root.addView(title);
 
-        TextView subtitle = text("軽量なリアルタイム端末モニター", 14, secondaryText, Typeface.NORMAL);
+        TextView subtitle = text(
+                "CPU・RAM・通信・バッテリーを軽量リアルタイム監視",
+                14,
+                secondaryText,
+                Typeface.NORMAL
+        );
         LinearLayout.LayoutParams subLp = lpMatchWrap();
         subLp.topMargin = dp(4);
         root.addView(subtitle, subLp);
@@ -133,6 +158,16 @@ public final class MainActivity extends Activity {
 
         statusText = text("停止中", 15, secondaryText, Typeface.BOLD);
         statusCard.addView(statusText);
+
+        TextView statusHelp = text(
+                "監視中はステータスバー左側に常駐アイコンを表示します。",
+                12,
+                secondaryText,
+                Typeface.NORMAL
+        );
+        LinearLayout.LayoutParams helpLp = lpMatchWrap();
+        helpLp.topMargin = dp(4);
+        statusCard.addView(statusHelp, helpLp);
 
         monitorButton = new Button(this);
         monitorButton.setAllCaps(false);
@@ -168,23 +203,54 @@ public final class MainActivity extends Activity {
 
         LinearLayout row3 = horizontalRow();
         root.addView(row3, rowLp());
-        LinearLayout batteryCard = metricCard("バッテリー", row3);
+        LinearLayout downCard = metricCard("ダウンロード", row3);
+        networkDownValue = metricValue(downCard);
+        networkDownDetail = metricDetail(downCard);
+        LinearLayout upCard = metricCard("アップロード", row3);
+        networkUpValue = metricValue(upCard);
+        networkUpDetail = metricDetail(upCard);
+
+        LinearLayout row4 = horizontalRow();
+        root.addView(row4, rowLp());
+        LinearLayout batteryCard = metricCard("バッテリー", row4);
         batteryValue = metricValue(batteryCard);
         batteryDetail = metricDetail(batteryCard);
-        LinearLayout thermalCard = metricCard("熱状態", row3);
+        LinearLayout currentCard = metricCard("バッテリー電流", row4);
+        batteryCurrentValue = metricValue(currentCard);
+        batteryCurrentDetail = metricDetail(currentCard);
+
+        LinearLayout row5 = horizontalRow();
+        root.addView(row5, rowLp());
+        LinearLayout swapCard = metricCard("Swap / ZRAM", row5);
+        swapValue = metricValue(swapCard);
+        swapDetail = metricDetail(swapCard);
+        LinearLayout cacheCard = metricCard("RAMキャッシュ", row5);
+        cacheValue = metricValue(cacheCard);
+        cacheDetail = metricDetail(cacheCard);
+
+        LinearLayout row6 = horizontalRow();
+        root.addView(row6, rowLp());
+        LinearLayout thermalCard = metricCard("熱状態", row6);
         thermalValue = metricValue(thermalCard);
         metricDetail(thermalCard).setText("Android Thermal API");
+        LinearLayout uptimeCard = metricCard("端末稼働時間", row6);
+        uptimeValue = metricValue(uptimeCard);
+        metricDetail(uptimeCard).setText("最終起動から");
 
-        LinearLayout uptimeCard = card();
-        LinearLayout.LayoutParams uptimeLp = lpMatchWrap();
-        uptimeLp.topMargin = dp(10);
-        root.addView(uptimeCard, uptimeLp);
-        TextView uptimeLabel = text("端末稼働時間", 13, secondaryText, Typeface.BOLD);
-        uptimeCard.addView(uptimeLabel);
-        uptimeValue = text("--", 20, primaryText, Typeface.BOLD);
-        LinearLayout.LayoutParams upValLp = lpMatchWrap();
-        upValLp.topMargin = dp(6);
-        uptimeCard.addView(uptimeValue, upValLp);
+        LinearLayout deviceCard = card();
+        LinearLayout.LayoutParams deviceLp = lpMatchWrap();
+        deviceLp.topMargin = dp(10);
+        root.addView(deviceCard, deviceLp);
+        TextView deviceLabel = text("端末情報", 13, secondaryText, Typeface.BOLD);
+        deviceCard.addView(deviceLabel);
+        deviceValue = text("--", 18, primaryText, Typeface.BOLD);
+        LinearLayout.LayoutParams deviceValueLp = lpMatchWrap();
+        deviceValueLp.topMargin = dp(6);
+        deviceCard.addView(deviceValue, deviceValueLp);
+        deviceDetail = text("--", 12, secondaryText, Typeface.NORMAL);
+        LinearLayout.LayoutParams deviceDetailLp = lpMatchWrap();
+        deviceDetailLp.topMargin = dp(4);
+        deviceCard.addView(deviceDetail, deviceDetailLp);
 
         TextView historyHeading = section("使用履歴");
         LinearLayout.LayoutParams histHeadLp = lpMatchWrap();
@@ -198,15 +264,23 @@ public final class MainActivity extends Activity {
 
         rangeSpinner = new Spinner(this);
         String[] ranges = {"過去1時間", "過去6時間", "過去24時間", "過去7日"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, ranges);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                ranges
+        );
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         rangeSpinner.setAdapter(adapter);
         rangeSpinner.setSelection(2);
         rangeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 refreshHistory();
             }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
         });
         historyCard.addView(rangeSpinner, lpMatchWrap());
 
@@ -216,20 +290,33 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams legendLp = lpMatchWrap();
         legendLp.topMargin = dp(10);
         historyCard.addView(legend, legendLp);
+
         TextView ramLegend = text("● RAM", 12, 0xFF5E5CE6, Typeface.BOLD);
         legend.addView(ramLegend);
+
         cpuLegend = text("● CPU", 12, 0xFF30B0C7, Typeface.BOLD);
-        LinearLayout.LayoutParams cpuLegendLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        LinearLayout.LayoutParams cpuLegendLp = new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+        );
         cpuLegendLp.leftMargin = dp(14);
         legend.addView(cpuLegend, cpuLegendLp);
 
         graphView = new HistoryGraphView(this);
         LinearLayout.LayoutParams graphLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(230));
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(230)
+        );
         graphLp.topMargin = dp(8);
         historyCard.addView(graphView, graphLp);
 
-        TextView historyNote = text("履歴は15秒ごとに保存し、7日を超えたデータは自動削除します。", 12, secondaryText, Typeface.NORMAL);
+        TextView historyNote = text(
+                "履歴は15秒ごとに保存し、7日を超えたデータは自動削除します。",
+                12,
+                secondaryText,
+                Typeface.NORMAL
+        );
         historyNote.setLineSpacing(0f, 1.15f);
         historyCard.addView(historyNote, lpMatchWrap());
 
@@ -241,16 +328,17 @@ public final class MainActivity extends Activity {
         clearLp.topMargin = dp(8);
         historyCard.addView(clearButton, clearLp);
 
-        TextView noteHeading = section("CPU表示について");
+        TextView noteHeading = section("取得制限");
         LinearLayout.LayoutParams noteHeadLp = lpMatchWrap();
         noteHeadLp.topMargin = dp(24);
         root.addView(noteHeading, noteHeadLp);
 
         TextView cpuNote = text(
-                "Androidの通常アプリは端末全体のCPU使用率へのアクセスが制限されています。取得できる機種では端末CPUを表示し、取得できない場合はこのモニター自身のCPU使用率を表示します。RAM使用率は端末全体の値です。",
+                "Androidの通常アプリは端末全体CPUや一部センサーへのアクセスが制限されています。取得できる値は端末全体を表示し、取得できない項目は「--」またはMonitor自身の値へ自動フォールバックします。",
                 13,
                 secondaryText,
-                Typeface.NORMAL);
+                Typeface.NORMAL
+        );
         cpuNote.setLineSpacing(dp(2), 1.12f);
         LinearLayout.LayoutParams noteLp = lpMatchWrap();
         noteLp.topMargin = dp(6);
@@ -276,46 +364,109 @@ public final class MainActivity extends Activity {
     private void applySnapshot(MetricSnapshot s) {
         if (s.hasSystemCpu()) {
             cpuValue.setText(FormatUtils.percent(s.systemCpuPercent));
-            cpuDetail.setText("端末全体 · " + s.cpuCores + "コア");
             cpuLegend.setText("● 端末CPU");
         } else {
             cpuValue.setText(FormatUtils.percent(s.appCpuPercent));
-            cpuDetail.setText("このアプリ · 端末CPUは制限中");
             cpuLegend.setText("● Monitor CPU");
         }
 
+        String freq = s.cpuAvgFreqMhz >= 0
+                ? FormatUtils.mhz(s.cpuAvgFreqMhz)
+                : "--";
+        cpuDetail.setText(s.cpuCores + "コア · 平均 " + freq);
+
         ramValue.setText(FormatUtils.percent(s.ramPercent));
-        ramDetail.setText(FormatUtils.bytes(s.ramUsedBytes) + " / " + FormatUtils.bytes(s.ramTotalBytes));
+        ramDetail.setText(
+                FormatUtils.bytes(s.ramUsedBytes)
+                        + " / "
+                        + FormatUtils.bytes(s.ramTotalBytes)
+                        + " · 空き "
+                        + FormatUtils.bytes(s.ramAvailableBytes)
+        );
 
         appRamValue.setText(FormatUtils.bytes(s.appPssBytes));
 
         storageValue.setText(FormatUtils.percent(s.storagePercent));
-        storageDetail.setText(FormatUtils.bytes(s.storageUsedBytes) + " / " + FormatUtils.bytes(s.storageTotalBytes));
+        storageDetail.setText(
+                FormatUtils.bytes(s.storageUsedBytes)
+                        + " / "
+                        + FormatUtils.bytes(s.storageTotalBytes)
+        );
+
+        networkDownValue.setText(FormatUtils.rate(s.networkRxBytesPerSec));
+        networkDownDetail.setText("起動後合計 " + FormatUtils.bytes(s.networkRxBytes));
+
+        networkUpValue.setText(FormatUtils.rate(s.networkTxBytesPerSec));
+        networkUpDetail.setText("起動後合計 " + FormatUtils.bytes(s.networkTxBytes));
 
         batteryValue.setText(s.batteryPercent >= 0 ? s.batteryPercent + "%" : "--");
-        if (Double.isNaN(s.batteryTempC)) {
-            batteryDetail.setText("温度 --");
+        String temp = Double.isNaN(s.batteryTempC)
+                ? "--"
+                : String.format(Locale.US, "%.1f°C", s.batteryTempC);
+        String voltage = s.batteryVoltageMv > 0
+                ? String.format(Locale.US, "%.3f V", s.batteryVoltageMv / 1000.0)
+                : "--";
+        batteryDetail.setText(temp + " · " + voltage);
+
+        batteryCurrentValue.setText(FormatUtils.currentMa(s.batteryCurrentNowUa));
+        String avgCurrent = FormatUtils.currentMa(s.batteryCurrentAvgUa);
+        batteryCurrentDetail.setText(
+                FormatUtils.batteryStatus(s.batteryStatus)
+                        + " · 平均 "
+                        + avgCurrent
+        );
+
+        if (s.swapTotalBytes > 0L) {
+            swapValue.setText(FormatUtils.bytes(s.swapUsedBytes));
+            swapDetail.setText(
+                    "使用 / "
+                            + FormatUtils.bytes(s.swapTotalBytes)
+            );
         } else {
-            batteryDetail.setText(String.format(Locale.US, "温度 %.1f°C", s.batteryTempC));
+            swapValue.setText("--");
+            swapDetail.setText("取得不可または未使用");
         }
+
+        cacheValue.setText(FormatUtils.bytes(s.cachedBytes));
+        cacheDetail.setText("Cached + SReclaimable");
 
         thermalValue.setText(FormatUtils.thermalLabel(s.thermalStatus));
         uptimeValue.setText(FormatUtils.duration(s.uptimeMs));
+
+        String manufacturer = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER;
+        String model = Build.MODEL == null ? "" : Build.MODEL;
+        deviceValue.setText((manufacturer + " " + model).trim());
+        deviceDetail.setText(
+                "Android "
+                        + Build.VERSION.RELEASE
+                        + " · API "
+                        + Build.VERSION.SDK_INT
+                        + " · Battery "
+                        + FormatUtils.batteryHealth(s.batteryHealth)
+                        + " · "
+                        + FormatUtils.powerSource(s.batteryPlugged)
+        );
     }
 
     private void toggleMonitoring() {
         if (isMonitoringRunning()) {
             stopService(new Intent(this, MonitorService.class).setAction(MonitorService.ACTION_STOP));
             getSharedPreferences(MonitorService.PREFS, MODE_PRIVATE)
-                    .edit().putBoolean(MonitorService.KEY_RUNNING, false).apply();
+                    .edit()
+                    .putBoolean(MonitorService.KEY_RUNNING, false)
+                    .apply();
             updateRunningUi();
             return;
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
             pendingStartAfterPermission = true;
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATIONS);
+            requestPermissions(
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    REQUEST_NOTIFICATIONS
+            );
             return;
         }
         startMonitoring();
@@ -325,21 +476,28 @@ public final class MainActivity extends Activity {
         Intent intent = new Intent(this, MonitorService.class).setAction(MonitorService.ACTION_START);
         startForegroundService(intent);
         getSharedPreferences(MonitorService.PREFS, MODE_PRIVATE)
-                .edit().putBoolean(MonitorService.KEY_RUNNING, true).apply();
+                .edit()
+                .putBoolean(MonitorService.KEY_RUNNING, true)
+                .apply();
         updateRunningUi();
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(
+            int requestCode,
+            String[] permissions,
+            int[] grantResults
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_NOTIFICATIONS && pendingStartAfterPermission) {
             pendingStartAfterPermission = false;
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startMonitoring();
             } else {
                 new AlertDialog.Builder(this)
                         .setTitle("通知の許可が必要です")
-                        .setMessage("通知欄にCPU/RAMを表示するため、通知を許可してください。")
+                        .setMessage("ステータスバーと通知欄にCPU/RAMを常時表示するため、通知を許可してください。")
                         .setPositiveButton("設定を開く", (d, w) -> {
                             Intent settings = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                                     .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
@@ -353,9 +511,13 @@ public final class MainActivity extends Activity {
 
     private void updateRunningUi() {
         boolean running = isMonitoringRunning();
-        statusText.setText(running ? "● 監視中 · 通知を2秒ごとに更新" : "○ 停止中 · 常駐処理なし");
+        statusText.setText(
+                running
+                        ? "● 監視中 · 常駐通知を2秒ごとに更新"
+                        : "○ 停止中 · 常駐処理なし"
+        );
         statusText.setTextColor(running ? 0xFF34C759 : secondaryText);
-        monitorButton.setText(running ? "監視を停止" : "通知モニターを開始");
+        monitorButton.setText(running ? "監視を停止" : "常駐モニターを開始");
     }
 
     private boolean isMonitoringRunning() {
@@ -365,20 +527,32 @@ public final class MainActivity extends Activity {
 
     private void refreshHistory() {
         if (historyDb == null || rangeSpinner == null || graphView == null) return;
+
         int selection = rangeSpinner.getSelectedItemPosition();
         long span;
         switch (selection) {
-            case 0: span = 60L * 60L * 1000L; break;
-            case 1: span = 6L * 60L * 60L * 1000L; break;
-            case 3: span = 7L * 24L * 60L * 60L * 1000L; break;
+            case 0:
+                span = 60L * 60L * 1000L;
+                break;
+            case 1:
+                span = 6L * 60L * 60L * 1000L;
+                break;
+            case 3:
+                span = 7L * 24L * 60L * 60L * 1000L;
+                break;
             case 2:
-            default: span = 24L * 60L * 60L * 1000L; break;
+            default:
+                span = 24L * 60L * 60L * 1000L;
+                break;
         }
+
         long since = System.currentTimeMillis() - span;
         dbExecutor.execute(() -> {
             List<HistoryDatabase.GraphPoint> points = historyDb.query(since, 260);
             runOnUiThread(() -> {
-                if (!isFinishing() && !isDestroyed()) graphView.setPoints(points);
+                if (!isFinishing() && !isDestroyed()) {
+                    graphView.setPoints(points);
+                }
             });
         });
     }
@@ -391,7 +565,11 @@ public final class MainActivity extends Activity {
                     historyDb.clearAll();
                     runOnUiThread(() -> {
                         graphView.setPoints(null);
-                        Toast.makeText(this, "履歴を消去しました", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(
+                                this,
+                                "履歴を消去しました",
+                                Toast.LENGTH_SHORT
+                        ).show();
                     });
                 }))
                 .setNegativeButton("キャンセル", null)
@@ -416,14 +594,19 @@ public final class MainActivity extends Activity {
         LinearLayout c = card();
         TextView l = text(label, 12, secondaryText, Typeface.BOLD);
         c.addView(l);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+        );
         if (row.getChildCount() > 0) lp.leftMargin = dp(10);
         row.addView(c, lp);
         return c;
     }
 
     private TextView metricValue(LinearLayout cardView) {
-        TextView value = text("--", 26, primaryText, Typeface.BOLD);
+        TextView value = text("--", 24, primaryText, Typeface.BOLD);
         LinearLayout.LayoutParams lp = lpMatchWrap();
         lp.topMargin = dp(7);
         cardView.addView(value, lp);
@@ -458,7 +641,10 @@ public final class MainActivity extends Activity {
     }
 
     private LinearLayout.LayoutParams lpMatchWrap() {
-        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        return new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
     }
 
     private GradientDrawable roundRect(int color, int radiusDp) {
@@ -473,20 +659,21 @@ public final class MainActivity extends Activity {
     }
 
     private void chooseColors() {
-        boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                == Configuration.UI_MODE_NIGHT_YES;
+        boolean dark =
+                (getResources().getConfiguration().uiMode
+                        & Configuration.UI_MODE_NIGHT_MASK)
+                        == Configuration.UI_MODE_NIGHT_YES;
+
         if (dark) {
             background = Color.rgb(14, 14, 16);
             card = Color.rgb(28, 28, 31);
             primaryText = Color.rgb(245, 245, 247);
             secondaryText = Color.rgb(162, 162, 168);
-            accent = Color.rgb(94, 92, 230);
         } else {
             background = Color.rgb(246, 246, 248);
             card = Color.WHITE;
             primaryText = Color.rgb(28, 28, 30);
             secondaryText = Color.rgb(99, 99, 102);
-            accent = Color.rgb(88, 86, 214);
         }
     }
 }
