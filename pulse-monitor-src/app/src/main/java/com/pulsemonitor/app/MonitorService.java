@@ -164,7 +164,6 @@ public final class MonitorService extends Service {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setAutoCancel(false)
-                .setSilent(true)
                 .setPriority(Notification.PRIORITY_DEFAULT)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
