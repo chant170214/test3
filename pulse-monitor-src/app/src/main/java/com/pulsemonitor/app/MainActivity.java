@@ -3,6 +3,7 @@ package com.pulsemonitor.app;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -160,7 +161,7 @@ public final class MainActivity extends Activity {
         statusCard.addView(statusText);
 
         TextView statusHelp = text(
-                "監視中はステータスバー左側に常駐アイコンを表示します。",
+                "Android 16では左上にLive Updateチップ（CPUxx% / RAMxx%）を表示します。",
                 12,
                 secondaryText,
                 Typeface.NORMAL
@@ -177,6 +178,16 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams buttonLp = lpMatchWrap();
         buttonLp.topMargin = dp(12);
         statusCard.addView(monitorButton, buttonLp);
+
+        if (Build.VERSION.SDK_INT >= 36) {
+            Button liveSettingsButton = new Button(this);
+            liveSettingsButton.setAllCaps(false);
+            liveSettingsButton.setText("Live Updateの設定");
+            liveSettingsButton.setOnClickListener(v -> openLiveUpdateSettings());
+            LinearLayout.LayoutParams liveSettingsLp = lpMatchWrap();
+            liveSettingsLp.topMargin = dp(6);
+            statusCard.addView(liveSettingsButton, liveSettingsLp);
+        }
 
         TextView liveHeading = section("リアルタイム");
         LinearLayout.LayoutParams headingLp = lpMatchWrap();
@@ -506,6 +517,18 @@ public final class MainActivity extends Activity {
                         .setNegativeButton("キャンセル", null)
                         .show();
             }
+        }
+    }
+
+    private void openLiveUpdateSettings() {
+        try {
+            Intent intent = new Intent("android.settings.MANAGE_APP_PROMOTED_NOTIFICATIONS");
+            intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+            startActivity(intent);
+        } catch (ActivityNotFoundException ignored) {
+            Intent fallback = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+            startActivity(fallback);
         }
     }
 
